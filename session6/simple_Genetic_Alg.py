@@ -1,72 +1,55 @@
 import numpy as np
 
-# Define parameters for the GA
-POPULATION_SIZE = 100
-GENOME_LENGTH = 20
-GENERATIONS = 100
-CROSSOVER_RATE = 0.8
-MUTATION_RATE = 0.01
+# Parameters
+population_size = 100
+chromosome_length = 20
+mutation_rate = 0.01
+crossover_rate = 0.7
+num_generations = 100
 
-# Initialize random population
-np.random.seed(42)  # for reproducible results
-population = np.random.randint(2, size=(POPULATION_SIZE, GENOME_LENGTH))
+# Initialize population
+population = np.random.randint(2, size=(population_size, chromosome_length))
+print(f"Population : {population} \n\nShape : {population.shape}")
 
-# Fitness function: counts the number of 1s in the genome
-def fitness(genome):
-    return np.sum(genome)
+def fitness(individual):
+    return np.sum(individual)
 
-# Selection function: tournament selection
-def select(population, tournament_size=5):
-    best = None
-    for _ in range(tournament_size):
-        individual = population[np.random.randint(len(population))]
-        if best is None or fitness(individual) > fitness(best):
-            best = individual
-    return best
+def select(population):
+    fitnesses = np.array([fitness(individual) for individual in population])
+    return population[np.random.choice(range(population_size), size=population_size, replace=True, p=fitnesses/fitnesses.sum())]
 
-# Crossover function: single point crossover
 def crossover(parent1, parent2):
-    if np.random.rand() < CROSSOVER_RATE:
-        crossover_point = np.random.randint(GENOME_LENGTH)
-        child1 = np.concatenate((parent1[:crossover_point], parent2[crossover_point:]))
-        child2 = np.concatenate((parent2[:crossover_point], parent1[crossover_point:]))
+    if np.random.rand() < crossover_rate:
+        point = np.random.randint(1, chromosome_length-1)
+        child1 = np.concatenate((parent1[:point], parent2[point:]))
+        child2 = np.concatenate((parent2[:point], parent1[point:]))
         return child1, child2
-    else:
-        return parent1, parent2
 
-# Mutation function: flip bits
-def mutate(genome):
-    for i in range(len(genome)):
-        if np.random.rand() < MUTATION_RATE:
-            genome[i] = 1 - genome[i]
-    return genome
+    return parent1, parent2
 
-# Main GA loop
-for generation in range(GENERATIONS):
-    new_population = []
-    while len(new_population) < POPULATION_SIZE:
-        # Select parents
-        parent1 = select(population)
-        parent2 = select(population)
-        # Crossover parents to create children
-        child1, child2 = crossover(parent1, parent2)
-        # Mutate children
-        child1 = mutate(child1)
-        child2 = mutate(child2)
-        # Add children to the new population
-        new_population.append(child1)
-        new_population.append(child2)
-    population = np.array(new_population)
+def mutate(individual):
+    for i in range(chromosome_length):
+        if np.random.rand() < mutation_rate:
+            individual[i] = 1 - individual[i]
+    return individual
 
-    # Evaluate the fitness of the new population
-    fitness_values = np.array([fitness(individual) for individual in population])
-    best_individual = population[np.argmax(fitness_values)]
-    best_fitness = fitness(best_individual)
+def genetic_algorithm():
+    global population
+    for generation in range(num_generations):
+        new_population = []
+        selected_population = select(population)
+        for i in range(0, population_size, 2):
+            parent1, parent2 = selected_population[i], selected_population[i+1]
+            child1, child2 = crossover(parent1, parent2)
+            child1 = mutate(child1)
+            child2 = mutate(child2)
+            new_population.extend([child1, child2])
+        population = np.array(new_population)
+        best_fitness = np.max([fitness(individual) for individual in population])
+        print(f"Generation {generation+1}: Best Fitness = {best_fitness}")
+    best_individual = population[np.argmax([fitness(individual) for individual in population])]
+    return best_individual
 
-    # Print the best fitness in the population
-    print(f"Generation {generation}: Best Fitness = {best_fitness}")
+best_solution = genetic_algorithm()
+print("Best Solution:", best_solution)
 
-# Output the best individual and its fitness
-best_fitness = np.max(fitness_values)
-best_individual = population[np.argmax(fitness_values)]
-(best_individual, best_fitness)
